@@ -1,0 +1,7 @@
+adicionar en las variables de entorno 
+
+ngrok authtoken 2MLkFyAoFK1RM5JlYpdilzFKzxb_5AUWjqcboBCuCrixXzSyj
+
+
+y en la consola colocar la siguiente url 
+ngrok http ww2.alegirmaparcial1.com:80   

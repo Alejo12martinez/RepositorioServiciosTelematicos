@@ -1,0 +1,15 @@
+$ORIGIN alegirmaparcial1.com.
+$TTL 3H
+@       IN SOA  server.alegirmaparcial1.com. root@alegirmaparcial1.com. (
+                                        0       ; serial
+                                        1D      ; refresh
+                                        1H      ; retry
+                                        1W      ; expire
+                                        3H )    ; minimum
+
+@       IN      NS     server.alegirmaparcial1.com.
+
+server  IN      A      192.168.50.3
+cliente IN      A      192.168.50.2
+ww2     IN      CNAME  server
+wwwlab  IN      CNAME  cliente
