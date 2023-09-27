@@ -1,0 +1,486 @@
+FTP Seguro -- servidor cliente
+
+sudo apt install vsftpd 
+
+generar la siguiente directorio
+
+mkdir -p /etc/ssl/vsftpd
+
+
+generar el certificado 
+openssl req -x509 -nodes -keyout /etc/ssl/vsftpd/vsftpd.pem -out /etc/ssl/vsftpd/vsftpd.pem -days 365 -newkey rsa:2048
+
+Configuración certificado 
+
+Country Name (2 letter code) []: CO
+State or Province Name (full name) []:Valle del Cauca
+Locality Name (eg, city) [Default City]:Cali
+Organization Name (eg, company) [Default Company Ltd]:Carvajal TyS
+Organizational Unit Name (eg, section) []:Desarrollo de Software
+Common Name (eg, your name or your server's hostname) []:192.168.50.2
+Email Address []:alejandro.giraldo_uao.edu.co
+
+
+Paso 2. Configurar VSFTPD para usar SSL/TLS
+vim /etc/vsftpd/vsftpd.conf
+
+# Configuración FTP SEGURO
+
+anonymous_enable=NO
+
+local_enable=YES
+
+write_enable=YES
+
+local_umask=022
+anon_upload_enable=YES
+dirmessage_enable=YES
+xferlog_enable=YES
+connect_from_port_20=YES
+xferlog_std_format=YES
+ftpd_banner=Bienvenidos a Servicios Telematicos
+chroot_local_user=YES
+allow_writeable_chroot=YES
+listen=YES
+listen_ipv6=NO
+
+pam_service_name=vsftpd
+userlist_enable=YES
+userlist_deny=NO
+
+# Configuración FTP SEGURO
+ssl_enable=YES
+ssl_tlsv1_2=YES
+ssl_sslv2=NO
+ssl_sslv3=NO
+
+rsa_cert_file=/etc/ssl/vsftpd/vsftpd.pem
+rsa_private_key_file=/etc/ssl/vsftpd/vsftpd.pem
+
+allow_anon_ssl=NO
+force_local_data_ssl=YES
+force_local_logins_ssl=YES
+
+require_ssl_reuse=NO
+ssl_ciphers=HIGH
+
+debug_ssl=YES
+
+pasv_enable=YES
+pasv_min_port=40000
+pasv_max_port=50000
+pasv_promiscuous=YES
+                     
+reiniciar 
+systemctl restart vsftpd
+
+
+
+_____________________________________________
+Configuración del Firewall
+
+sudo systemctl stop firewalld
+sudo systemctl restart firewalld
+sudo systemctl start firewalld
+sudo systemctl status firewalld
+
+sudo firewall-cmd --zone=dmz --list-all
+sudo firewall-cmd --list-all
+sudo firewall-cmd --get-active-zones
+
+sudo firewall-cmd --zone=dmz --add-port=990/tcp --permanent
+sudo firewall-cmd --zone=dmz --add-port=40000-50000/tcp --permanent
+
+
+
+# Abre el puerto 990 (control) y el rango de puertos pasivos en la zona dmz (ajusta según tu configuración)
+sudo firewall-cmd --zone=dmz --add-port=990/tcp --permanent
+sudo firewall-cmd --zone=dmz --add-port=40000-50000/tcp --permanent
+sudo firewall-cmd --zone=dmz --add-port=21/tcp --permanent
+
+
+sudo firewall-cmd --reload
+
+redirigir
+
+
+Redirige las solicitudes de FTP seguro al servidor FTP seguro (192.168.50.2) en la zona 
+
+# Redirige el tráfico de los puertos 990 y 40000-50000 hacia el servidor FTP seguro en la zona dmz (ajusta la dirección IP según tu configuración)
+sudo firewall-cmd --zone=dmz --add-forward-port=port=990:proto=tcp:toport=990:toaddr=192.168.50.2 --permanent
+sudo firewall-cmd --zone=dmz --add-forward-port=port=40000-50000:proto=tcp:toport=40000-50000:toaddr=192.168.50.2 --permanent
+sudo firewall-cmd --zone=dmz --add-forward-port=port=21:proto=tcp:toport=21:toaddr=192.168.50.2 --permanent
+
+habilitar ftp a zona dmz 
+sudo firewall-cmd --permanent --zone=dmz --add-service=ftp
+
+
+
+masquerade zona dmz y internal
+sudo firewall-cmd --zone=dmz --add-masquerade --permanent
+sudo firewall-cmd --zone=internal --add-masquerade --permanent
+sudo firewall-cmd --reload
+
+
+
+validar con el siguiente comando
+
+firewall-cmd --zone=dmz --list-all
+la zona por default debe ser la dmz
+sudo firewall-cmd --set-default-zone=dmz
+
+
+configuración actual
+[root@servidor ~]# firewall-cmd --zone=dmz --list-all
+dmz (active)
+  target: default
+  icmp-block-inversion: no
+  interfaces: eth0 eth1
+  sources:
+  services: ftp http https ssh
+  ports: 990/tcp 40000-50000/tcp 21/tcp
+  protocols:
+  forward: no
+  masquerade: yes
+  forward-ports:
+        port=443:proto=tcp:toport=443:toaddr=192.168.50.2
+        port=990:proto=tcp:toport=990:toaddr=192.168.50.2
+        port=40000-50000:proto=tcp:toport=40000-50000:toaddr=192.168.50.2
+        port=21:proto=tcp:toport=21:toaddr=192.168.50.2
+  source-ports:
+  icmp-blocks:
+  rich rules:
+
+firewall-cmd --get-default-zone
+si no esta dmz a la zona default 
+asignarla
+la zona por default debe ser la dmz
+sudo firewall-cmd --set-default-zone=dmz
+
+agregar a la zona dmz e internal
+
+sudo firewall-cmd --zone=dmz --add-interface=eth1 --permanent
+sudo firewall-cmd --zone=internal --add-interface=eth2 --permanent  
+
+
+sudo firewall-cmd --reload
+sudo systemctl start firewalld
+sudo systemctl stop firewalld
+sudo systemctl status firewalld
+
+
+
+agregar ip publica al vagrantfile y darle vagrant reload servidor
+
+  vm.network "public_network", ip: "192.168.1.100"
+
+sudo firewall-cmd --zone=dmz --add-rich-rule='rule family="ipv4" source address="192.168.1.100" port protocol="tcp" port="21" accept'
+sudo firewall-cmd --zone=dmz --add-rich-rule='rule family="ipv4" source address="192.168.1.100" port protocol="tcp" port="40000-50000" accept'
+
+sudo firewall-cmd --zone=dmz --add-rich-rule='rule family="ipv4" source address="192.168.1.100" port protocol="tcp" port="21" accept'
+sudo firewall-cmd --zone=dmz --add-rich-rule='rule family="ipv4" source address="192.168.1.100" port protocol="tcp" port="40000-50000" accept'
+
+
+sudo firewall-cmd --zone=dmz --add-rich-rule='rule family="ipv4" source address="192.168.1.100" port protocol="tcp" port="21" accept'
+sudo firewall-cmd --zone=dmz --add-rich-rule='rule family="ipv4" source address="192.168.1.100" port protocol="tcp" port="40000-50000" accept'
+sudo firewall-cmd --reload
+
+
+sudo firewall-cmd --reload
+
+
+192.168.1.100
+
+
+----------------------------------
+Maestro esclavo dns cliente servira como maestro 192.168.50.3
+
+instalar 
+yum install bind-utils bind-libs bind-*
+
+configurar el named.conf
+
+cd /etc/
+
+sudo vim named.conf
+
+agregar las siguientes lineas 
+
+options {
+        listen-on port 53 { 127.0.0.1; 192.168.50.2;};
+        listen-on-v6 port 53 { ::1; };
+        directory       "/var/named";
+        dump-file       "/var/named/data/cache_dump.db";
+        statistics-file "/var/named/data/named_stats.txt";
+        memstatistics-file "/var/named/data/named_mem_stats.txt";
+        forward only;
+        forwarders { 8.8.8.8; };
+        secroots-file   "/var/named/data/named.secroots";
+        recursing-file  "/var/named/data/named.recursing";
+        allow-query     { localhost; 192.168.50.2; };
+
+
+en las zonas hacia delante y aatras colocar para que se pueda
+transferir al esclavo el also-notify y allow-transfer
+
+/* Zona hacia adelante */
+zone "carvajal.com" IN {
+        type master;
+        file "carvajal.com.fwd";
+        also-notify { 192.168.50.3; };
+        allow-transfer { 192.168.50.3; };
+};
+
+/* Zona reversa */
+zone "50.168.192.in-addr.arpa" IN {
+        type master;
+        file "carvajal.com.rev";
+        also-notify { 192.168.50.3; };
+        allow-transfer { 192.168.50.3; };
+};
+
+
+validar que haya quedado el named.conf
+named-checkconf /etc/named.conf
+
+
+si no sale nada es que quedo correcto
+
+
+nos dirigimos para crear la inversa y hacia adelante 
+
+ahora nos dirigimos a la ruta cd /var/named
+
+creamos los siguientes archivos 
+
+cp named.empty carvajal.com.fwd
+sudo vim carvajal.com.fwd
+
+$ORIGIN carvajal.com.
+$TTL 3H
+@       IN SOA  server.carvajal.com. root@carvajal.com. (
+                                        0       ; serial
+                                        1D      ; refresh
+                                        1H      ; retry
+                                        1W      ; expire
+                                        3H )    ; minimum
+
+@       IN      NS     server.carvajal.com.
+
+server  IN      A      192.168.50.2
+cliente IN      A      192.168.50.3
+ww2     IN      CNAME  server
+wwwlab  IN      CNAME  cliente
+
+
+
+cp named.empty carvajal.com.rev
+sudo vim carvajal.com.rev
+
+$ORIGIN 50.168.192.in-addr.arpa.
+$TTL 3H
+@       IN SOA  server.carvajal.com. root@carvajal.com. (
+                                        0       ; serial
+                                        1D      ; refresh
+                                        1H      ; retry
+                                        1W      ; expire
+                                        3H )    ; minimum
+
+@       IN      NS     server.carvajal.com.
+2               PTR    server.carvajal.com
+2       IN      PTR    ww2.carvajal.com.
+3               PTR    cliente.carvaja.com.
+3               PTR    wwwlab.carvajal.com.
+
+se proceden a validar si estos tienen errores 
+
+named-checkzone alegirma.com /var/named/carvajal.com.fwd 
+named-checkzone 50.168.192.in-addr.arpa /var/named/carvajal.com.rev
+
+
+los numeros son las ip de los servidor que serviran como maestro y esclavo
+192.168.50.2 es el maestro y 192.168.50.3 es el que servira como esclavo
+
+asignarle los siguientes permisos 
+chmod 755 carvajal.com.fwd 
+chmod 755 carvajal.com.rev
+
+
+
+se agrega en vim etc/resolv.conf
+
+cd /etc
+vim resolv.conf
+
+search localdomain carvajal.com
+nameserver 192.168.50.2
+
+
+ahora vamos al hosts
+
+cd /etc/
+
+sudo vim hosts
+
+se agrega la siguiente linea 
+192.168.50.2 server.carvajal.com carvajal.com
+
+
+
+systemctl start named
+systemctl stop named
+systemctl status named
+
+
+
+----------------------------------------------------------
+configuración esclavo
+instalar 
+yum install bind-utils bind-libs bind-*
+
+configurar el named.conf
+
+cd /etc/
+
+sudo vim named.conf
+
+se agrega las siguientes lineas 
+
+options {
+        listen-on port 53 { 127.0.0.1; 192.168.50.3;};
+        listen-on-v6 port 53 { ::1; };
+        directory       "/var/named";
+        dump-file       "/var/named/data/cache_dump.db";
+        statistics-file "/var/named/data/named_stats.txt";
+        memstatistics-file "/var/named/data/named_mem_stats.txt";
+        secroots-file   "/var/named/data/named.secroots";
+        recursing-file  "/var/named/data/named.recursing";
+        allow-query     { localhost; 192.168.50.0/24;};
+
+
+/* Zona hacia adelante */
+zone "carvajal.com" IN {
+        type slave;
+        masters { 192.168.50.2; };
+};
+
+/* Zona reversa */
+zone "50.168.192.in-addr.arpa" IN {
+        type slave;
+        masters { 192.168.50.2; };
+};
+
+
+solo se configura el named.conf y el resolv nada mas 
+
+
+systemctl start named
+systemctl stop named
+systemctl status named
+------------------------------------------------------------------------
+Servidor Esclavo DNS
+
+Configuración Firewalld (Servidor 172.16.0.3 - 192.168.50.3)
+
+sudo dnf install iptables-services
+
+sudo systemctl enable iptables
+sudo systemctl start iptables
+sudo systemctl status iptables
+
+editar el siguiente archivo 
+
+/etc/
+vim sysctl.conf
+
+agregar la siguiente linea 
+
+net.ipv4.ip_forward = 1
+
+recarga la configuración en el sistema con el siguiente comando
+
+sudo sysctl -p
+
+
+sudo firewall-cmd --zone=dmz --permanent --add-service=dns
+sudo firewall-cmd --reload
+
+Configura las reglas de firewall para redirigir el tráfico DNS entrante hacia los servidores DNS internos 
+(192.168.50.2 y 192.168.50.3). Puedes hacerlo utilizando el módulo iptables de esta manera:
+
+sudo iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to-destination 192.168.50.2:53
+sudo iptables -t nat -A PREROUTING -p tcp --dport 53 -j DNAT --to-destination 192.168.50.2:53
+sudo iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to-destination 192.168.50.3:53
+sudo iptables -t nat -A PREROUTING -p tcp --dport 53 -j DNAT --to-destination 192.168.50.3:53
+
+
+Guarda las reglas de iptables para que se carguen en el arranque:
+sudo service iptables save
+
+
+configurar el resolv en el servidor maestro y esclavo
+
+cd /etc/
+
+sudo vim resolv.conf
+
+nameserver 192.168.50.2  # En la máquina DNS maestro (192.168.50.2)
+
+nameserver 192.168.50.3  # En la máquina DNS esclavo (192.168.50.3)
+
+
+
+
+
+
+Iniciar servicios de firewalld
+service firewalld start
+service firewalld status
+service firewalld stop
+
+
+agrega las reglas para permitir el trafico DNS desde la red interna hacia el firewall
+
+
+
+servidor anfitrion windows
+
+Abre el menú de "Configuración" en Windows y selecciona "Red e Internet."
+
+Haz clic en "Configuración de red" en la parte inferior de la página.
+
+A la izquierda, selecciona "Wi-Fi" o "Ethernet," según la forma en que estés conectado a la red.
+
+En la sección "Configuración de red," haz clic en "Cambiar opciones del adaptador."
+
+Selecciona la conexión de red activa (Wi-Fi o Ethernet) con la que deseas trabajar. Haz clic con el botón derecho y selecciona "Propiedades."
+
+En la lista de "Elementos de esta conexión," busca "Protocolo de Internet versión 4 (TCP/IPv4)" y selecciónalo. Luego, haz clic en el botón "Propiedades."
+
+En la ventana de "Propiedades de Protocolo de Internet versión 4 (TCP/IPv4)," selecciona la opción "Usar las siguientes direcciones de servidor DNS." Luego, ingresa la dirección IP del firewall CentOS (172.16.0.3) en el campo "Servidor DNS preferido."
+
+Haz clic en "Aceptar" para guardar la configuración.
+
+usarlo tambien en las redes donde salga virtualhost
+
+hacer pruebas con 
+nslookup server.carvajal.com
+
+validar que el firewalld este arriba
+
+
+
+
+sudo firewall-cmd --zone=dmz --list-all
+sudo firewall-cmd --list-all
+sudo firewall-cmd --get-active-zones
+
+
+sudo firewall-cmd --zone=dmz --add-interface=eth1 --permanent
+sudo firewall-cmd --zone=internal --add-interface=eth2 --permanent  
+
+firewall-cmd --reload 
+
+service httpd restart 
+
+
