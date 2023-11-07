@@ -1,0 +1,31 @@
+{
+  "config": {
+    "target": "http://ww2.haproxy.com/",
+    "phases": [
+      {
+        "duration": 300,
+        "arrivalRate": 10000,
+        "maxVusers": 10000
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "flow": [
+        {
+          "get": {
+            "url": "/"
+          }
+        },
+        {
+          "think": 1
+        },
+        {
+          "get": {
+            "url": "/about"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "config": {
+    "target": "http://ww2.haproxy.com/",
+    "phases": [
+      {
+        "duration": 43200,  // Duración de 12 horas
+        "arrivalRate": 1000,  // Tasa de llegada baja, ajusta según necesites
+        "maxVusers": 1000
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "flow": [
+        {
+          "get": {
+            "url": "/"
+          }
+        },
+        {
+          "think": 2  // Pausa de 2 segundos entre solicitudes
+        },
+        {
+          "get": {
+            "url": "/about"
+          }
+        }
+      ]
+    }
+  ]
+}

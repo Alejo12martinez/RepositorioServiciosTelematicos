@@ -1,0 +1,56 @@
+{
+  "config": {
+    "target": "http://ww2.haproxy.com/",
+    "phases": [
+      {
+        "duration": 3600,  // Duración de la primera fase: 1 hora
+        "arrivalRate": 100,  // Tasa de llegada inicial
+        "maxVusers": 100
+      },
+      {
+        "duration": 3600,  // Duración de la segunda fase: 1 hora
+        "arrivalRate": 500,  // Tasa de llegada aumentada
+        "maxVusers": 500
+      },
+      {
+        "duration": 3600,  // Duración de la tercera fase: 1 hora
+        "arrivalRate": 1000,  // Tasa de llegada aumentada nuevamente
+        "maxVusers": 1000
+      },
+      {
+        "duration": 3600,  // Duración de la cuarta fase: 1 hora
+        "arrivalRate": 2000,  // Aumento de la tasa de llegada
+        "maxVusers": 2000
+      },
+      {
+        "duration": 3600,  // Duración de la quinta fase: 1 hora
+        "arrivalRate": 5000,  // Mayor aumento en la tasa de llegada
+        "maxVusers": 5000
+      },
+      {
+        "duration": 3600,  // Duración de la sexta fase: 1 hora
+        "arrivalRate": 10000,  // Tasa de llegada máxima
+        "maxVusers": 10000
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "flow": [
+        {
+          "get": {
+            "url": "/"
+          }
+        },
+        {
+          "think": 2  // Pausa de 2 segundos entre solicitudes
+        },
+        {
+          "get": {
+            "url": "/about"
+          }
+        }
+      ]
+    }
+  ]
+}
