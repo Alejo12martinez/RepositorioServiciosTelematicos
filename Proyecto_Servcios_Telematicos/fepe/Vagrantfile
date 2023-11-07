@@ -1,0 +1,35 @@
+Vagrant.configure("2") do |config|
+  if Vagrant.has_plugin?("vagrant-vbguest")
+    config.vbguest.no_install = true
+    config.vbguest.auto_update = false
+    config.vbguest.no_remote = true
+  end
+
+  config.vm.define :haproxy do |haproxy|
+    haproxy.vm.box = "fepe/stream8"
+    haproxy.vm.network :private_network, ip: "10.85.32.191"
+    haproxy.vm.hostname = "haproxy"
+    haproxy.vm.synced_folder ".", "/vagrant"
+  end
+
+  config.vm.define :sender do |sender|
+    sender.vm.box = "fepe/stream8"
+    sender.vm.network :private_network, ip: "10.85.32.172"
+    sender.vm.hostname = "sender"
+    sender.vm.synced_folder ".", "/vagrant"
+  end
+
+  config.vm.define :engine do |engine|
+    engine.vm.box = "fepe/stream8"
+    engine.vm.network :private_network, ip: "10.85.32.225"
+    engine.vm.hostname = "engine"
+    engine.vm.synced_folder ".", "/vagrant"
+  end
+  
+  config.vm.define :inbound do |inbound|
+    inbound.vm.box = "fepe/stream8"
+    inbound.vm.network :private_network, ip: "10.85.32.46"
+    inbound.vm.hostname = "inbound"
+    inbound.vm.synced_folder ".", "/vagrant"
+  end
+end
